@@ -2,10 +2,7 @@ package dev.lpa;
 
 import com.mysql.cj.jdbc.MysqlDataSource;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class Main {
   
@@ -64,5 +61,21 @@ public class Main {
       foundData = true;
     }
     return foundData;
+  }
+  
+  private static int addArtist(PreparedStatement ps, Connection conn,
+                               String artist_name) throws SQLException {
+    
+    int artistId = -1;
+    ps.setString(1, artist_name);
+    int insertedCount = ps.executeUpdate();
+    if (insertedCount > 0) {
+      ResultSet generatedKeys = ps.getGeneratedKeys();
+      if (generatedKeys.next()) {
+        artistId = generatedKeys.getInt(1);
+        System.out.println("Auto-incremented ID: " + artistId);
+      }
+    }
+    return artistId;
   }
 }
