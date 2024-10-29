@@ -2,7 +2,11 @@ package dev.lpa;
 
 import com.mysql.cj.jdbc.MysqlDataSource;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.*;
+import java.util.List;
 
 public class Main {
   
@@ -112,5 +116,52 @@ public class Main {
       }
     }
     return songId;
+  }
+  
+  private static void addDataFromFile(Connection conn) throws SQLException {
+    
+    List<String> records = null;
+    try {
+      records = Files.readAllLines(Path.of("NewAlbums.csv"));
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    
+    String lastAlbum = null;
+    String lastArtist = null;
+    int artistId = -1;
+    int albumId = -1;
+    
+    try(PreparedStatement psArtist = conn.prepareStatement(ARTIST_INSERT,
+        Statement.RETURN_GENERATED_KEYS);
+       PreparedStatement psAlbum = conn.prepareStatement(ALBUM_INSERT,
+         Statement.RETURN_GENERATED_KEYS);
+       PreparedStatement psSong = conn.prepareStatement(SONG_INSERT,
+         Statement.RETURN_GENERATED_KEYS)
+    ) {
+      conn.setAutoCommit(false);
+      
+      for (String record : records) {
+        String[] columns = record.split(",");
+        if (lastArtist == null || !lastArtist.equals(columns[0])) {
+          lastArtist = columns[0];
+          artistId = addArtist(psArtist, conn, lastArtist);
+        }
+        if (lastAlbum == null || !lastAlbum.equals(columns[1])) {
+          lastAlbum = columns[1];
+          albumId = addAlbum(psAlbum, conn, artistId, lastAlbum);
+        }
+        int trackNo = Integer.parseInt(columns[2]);
+        String songTitle = columns[3];
+        addSong(psSong, conn, albumId, trackNo, songTitle);
+      }
+      
+      conn.commit();
+    } catch (SQLException e) {
+      conn.rollback();
+      throw new RuntimeException(e);
+    } finally {
+      conn.setAutoCommit(true);
+    }
   }
 }
