@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.*;
+import java.util.Arrays;
 import java.util.List;
 
 public class Main {
@@ -147,6 +148,12 @@ public class Main {
         int trackNo = Integer.parseInt(columns[2]);
         String songTitle = columns[3];
         addSong(psSong, conn, albumId, trackNo, songTitle);
+      }
+      int[] inserts = psSong.executeBatch();
+      int totalInserts = Arrays.stream(inserts).sum();
+      System.out.printf("%d song records added %n", inserts.length);
+      if (!(Arrays.stream(inserts).sum() == records.size())) {
+        throw new SQLException();
       }
       
       conn.commit();
