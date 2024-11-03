@@ -49,21 +49,25 @@ public class MusicCallableStatement {
       System.getenv("MYSQL_PASS"))
     ) {
       CallableStatement cs = connection.prepareCall(
-        "CALL music.addAlbum(?,?,?)");
+        "CALL music.addAlbumInOutCounts(?,?,?,?)");
       
       albums.forEach((artist, albumMap) -> {
-          albumMap.forEach((album, songs) -> {
-            try {
-              cs.setString(1, artist);
-              cs.setString(2, album);
-              cs.setString(3, songs);
-              cs.execute();
-              
-            } catch (SQLException e) {
-              System.err.println(e.getErrorCode() + " " + e.getMessage());
-            }
-          });
+        albumMap.forEach((album, songs) -> {
+          try {
+            cs.setString(1, artist);
+            cs.setString(2, album);
+            cs.setString(3, songs);
+            cs.setInt(4, 10); // NOTE: always initialize InOut parameters
+            cs.registerOutParameter(4, Types.INTEGER);  // NOTE: read out
+            cs.execute();
+            System.out.printf("%d songs were added for %s%n",
+              cs.getInt(4), album);
+            
+          } catch (SQLException e) {
+            System.err.println(e.getErrorCode() + " " + e.getMessage());
+          }
         });
+      });
       
       String sql = "SELECT * FROM music.albumview WHERE artist_name = ?";
       PreparedStatement ps = connection.prepareStatement(sql);
